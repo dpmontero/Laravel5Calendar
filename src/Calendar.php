@@ -36,11 +36,13 @@ class Calendar
     public function setupCalendar($year = '', $month = '', $event = [], $data = [])
     {
         // If no event are passed AND an event session is avaiable then we use the data stored in the session
+
         if (! $event and session()->has('event')) {
             $event = session()->get('event');
         } else {
             session()->put('event', $event);
         }
+        
 
         $today = Carbon::now();
 
@@ -53,8 +55,9 @@ class Calendar
         }
 
         $current_month = Carbon::createFromDate($year, $month, 1);
+        $next_month = $current_month->copy()->addMonth(1);
         $previous_month = $current_month->copy()->subMonth();
-        $next_month = $current_month->copy()->addMonth();
+
 
         // Calculation of the number of week in month (go to the end of the month and get the week of the month)
         $weeksInMonth = $current_month->copy()->endOfMonth()->weekOfMonth;
@@ -73,24 +76,49 @@ class Calendar
         for ($currentWeek = 0; $currentWeek <= $weeksInMonth; $currentWeek++) {
             // Iteration over the number of day in the week for building each column in the calendar
             for ($i = 0; $i < 7; $i++) {
-                $class = '';
+                $class = $monthout = $status = $an_event = $idevent = '';
+
                 // Creation of a new instance of Carbon for each day adding a day to the prior day
                 $day = $day->copy()->addDay();
 
+                // Checkking if the day is pass
+                if ($today > $day && !$day->isSameDay($today))  {
+                  $status = 'blocked';
+                }
                 // Checking if the day is in the current month and adding a class to that day
                 if ($month != $day->month) {
-                    $class .= ' next-month';
+                    $monthout = 'day-out';
                 }
+
                 // Cheking if the day is in the event array and adding a class to that day
-                if (in_array($day->year.'/'.$day->month.'/'.$day->day, $event)) {
-                    $class .= ' event';
+                //if (in_array($day->year.'-'.$day->month.'-'.$day->day, $event)) {
+                //    $an_event = 'an_event';
+                //}
+
+                // Cheking if the day is in the event array and adding a class to that day
+                if ($event ) {
+                  foreach ($event as $e) {
+                      $dateevent = Carbon::createFromFormat('Y-m-d H:i:s', $e);
+                      if ($dateevent->format('Y-m-d') === $day->format('Y-m-d') ) {
+                        $an_event = $dateevent;
+                        $idevent = $dateevent->format('Y-m-dHi');
+
+                      }
+                  }
                 }
+
                 // Cheking if the day is today and adding a class to that day
                 if ($day->isSameDay($today)) {
                     $class .= ' highlight';
                 }
+
+
                 $calendar['weeks'][$currentWeek][$day->day]['day'] = $day;
                 $calendar['weeks'][$currentWeek][$day->day]['class'] = $class;
+                $calendar['weeks'][$currentWeek][$day->day]['status'] = $status;
+                $calendar['weeks'][$currentWeek][$day->day]['monthout'] = $monthout;
+                $calendar['weeks'][$currentWeek][$day->day]['an_event'] = $an_event;
+                $calendar['weeks'][$currentWeek][$day->day]['idevent'] = $idevent;
             }
         }
         // dd($data);
